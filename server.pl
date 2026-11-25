@@ -4,6 +4,7 @@
 :- use_module(library(http/http_json)).
 :- use_module(library(http/http_files)).
 :- use_module(library(filesex)).
+:- use_module(library(readutil)).
 :- use_module(library(lists)).
 :- use_module(library(apply)).
 :- ensure_loaded(kb).
@@ -25,15 +26,18 @@ serve(Req) :- base_dir(D), directory_file_path(D,static,S),
     (   P == '/' -> F = 'index.html' ; sub_atom(P,1,_,0,F) ),
     (   sub_atom(F,_,_,_,'..') -> throw(http_reply(forbidden(P))) ; true ),
     directory_file_path(S,F,A1), directory_file_path(D,F,A2),
-    (   exists_file(A1) -> http_reply_file(A1,[],Req)
-    ;   exists_file(A2), \+ sub_atom(F,_,_,_,'.pl') -> http_reply_file(A2,[],Req)
+    (   exists_file(A1) -> send_file(A1)
+    ;   exists_file(A2), \+ sub_atom(F,_,_,_,'.pl') -> send_file(A2)
     ;   ( exists_directory(D) -> directory_files(D,L1) ; L1 = [] ),
         ( exists_directory(S) -> directory_files(S,L2) ; L2 = [] ),
         format('Content-type: text/plain~n~n'),
         format('Not found: ~w~nbase_dir: ~w~nfiles in base_dir: ~w~nstatic dir: ~w~nfiles in static: ~w~n',
                [P,D,L1,S,L2]) ).
-serve_src(Req) :- base_dir(D), directory_file_path(D,'kb.pl',F),
-    http_reply_file(F,[mime_type(text/plain)],Req).
+serve_src(_) :- base_dir(D), directory_file_path(D,'kb.pl',F), send_file(F).
+send_file(F) :-
+    read_file_to_string(F,S,[encoding(utf8)]),
+    ( file_name_extension(_,html,F) -> M = 'text/html' ; M = 'text/plain' ),
+    format('Content-type: ~w; charset=UTF-8~n~n',[M]), write(S).
 
 to_atom(S,A) :- atom_string(A,S).
 to_num(V0,V) :- number(V0), !, V = V0.
