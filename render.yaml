@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: motor-drive-prolog-expert-system
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/kb
