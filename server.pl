@@ -21,7 +21,12 @@
 :- http_handler(root(api/evaluate), h_eval,     []).
 
 serve(Req) :- base_dir(D), directory_file_path(D,static,S),
-    http_reply_from_files(S,[indexes(['index.html'])],Req).
+    memberchk(path(P),Req),
+    (   P == '/' -> F = 'index.html' ; sub_atom(P,1,_,0,F) ),
+    (   sub_atom(F,_,_,_,'..') -> throw(http_reply(forbidden(P))) ; true ),
+    directory_file_path(S,F,Abs),
+    (   exists_file(Abs) -> http_reply_file(Abs,[],Req)
+    ;   throw(http_reply(not_found(P))) ).
 serve_src(Req) :- base_dir(D), directory_file_path(D,'kb.pl',F),
     http_reply_file(F,[mime_type(text/plain)],Req).
 
